@@ -28,8 +28,10 @@ def revenue():
         f2 = request.files['sheet2']
         fl2 = "2sh"
         sh2 = save_file(f2, fl2)
-
+        # Path of input folder 
         path1 =  op.join(op.dirname(__file__), 'InputFile')
+        # Path of output folder 
+        path2 =  op.join(op.dirname(__file__), 'OutputFile')
         # Read Excel Sheet 1 (Project Details)
         xlsx_file1 = Path(path1, sh1)
         wb_obj1 = openpyxl.load_workbook(xlsx_file1)
@@ -40,8 +42,9 @@ def revenue():
         sheet2 = wb_obj2.active
 
         # Generate excel sheet
-        opt = secrets.token_hex(3) + "_report.xlsx"
-        workbook = xlsxwriter.Workbook('OutputFile/'+opt) 
+        # sh3 = output file name
+        sh3 = secrets.token_hex(3) + "_report.xlsx"
+        workbook = xlsxwriter.Workbook('OutputFile/'+sh3) 
         worksheet = workbook.add_worksheet() 
         # write data to excel
         worksheet.write('A1', 'Project Name') 
@@ -98,7 +101,34 @@ def revenue():
                     worksheet.write("G"+str(x), expected_revenue)
                     x = x+1
         workbook.close()
-    return str(len(r))
+        # Achual Revenue calculation
+        xlsx_file3 = Path(path2, sh3)
+        wb_obj3 = openpyxl.load_workbook(xlsx_file3)
+        sheet3 = wb_obj3.active
+        k=0
+        ind=2
+        for i in range(2, sheet3.max_row+1):
+            cell1 = sheet3.cell(row=i, column=1)
+            cell7 = sheet3.cell(row=i, column=7)
+            if i == 2:
+                k=k+cell7.value
+            elif cell1.value == sheet3.cell(row=i-1, column=1).value and i != 2:
+                k=k+cell7.value
+            else:
+                print(ind)
+                H=sheet3.cell(row=ind, column=8)
+                H.value = k
+                ind=i
+                print(k)
+                k=cell7.value
+            if i==sheet3.max_row:
+                print(ind)
+                H=sheet3.cell(row=ind, column=8)
+                H.value = k
+                print(k)
+        ach_rev = os.path.join(path2, sh3)
+        wb_obj3.save(ach_rev)
+    return str(ach_rev)
     #return redirect(url_for('index'))
 
 if __name__ =='__main__':

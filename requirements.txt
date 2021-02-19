@@ -1,4 +1,4 @@
 Flask
-# xlrd
 openpyxl
 xlsxwriter
+forex-python

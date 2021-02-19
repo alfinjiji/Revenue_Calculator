@@ -3,8 +3,11 @@ from werkzeug.utils import secure_filename
 import os, openpyxl, secrets, xlsxwriter
 import os.path as op
 from pathlib import Path
+from forex_python.converter import CurrencyRates 
 
 app = Flask(__name__)
+
+c = CurrencyRates()
 
 def save_file(exl_file, fl):
     random_hex = secrets.token_hex(4)
@@ -12,6 +15,7 @@ def save_file(exl_file, fl):
     sheet = fl + random_hex + f_ext
     exl_file.save('InputFile/' +sheet )
     return sheet
+
 
 @app.route('/')
 def index():
@@ -101,7 +105,7 @@ def revenue():
                     worksheet.write("G"+str(x), expected_revenue)
                     x = x+1
         workbook.close()
-        # Achual Revenue calculation
+        # Actual Revenue calculation
         xlsx_file3 = Path(path2, sh3)
         wb_obj3 = openpyxl.load_workbook(xlsx_file3)
         sheet3 = wb_obj3.active
@@ -115,20 +119,43 @@ def revenue():
             elif cell1.value == sheet3.cell(row=i-1, column=1).value and i != 2:
                 k=k+cell7.value
             else:
-                print(ind)
-                H=sheet3.cell(row=ind, column=8)
-                H.value = k
+                H = sheet3.cell(row=ind, column=8)
+                Cu = sheet3.cell(row=ind, column=3)
+                expense = Cu.value
+                curr = expense[0:3]
+                val = int(expense[4:])
+                # if currency in not INR convert to INR
+                if curr != 'INR':
+                    Currency = c.get_rate(curr, 'INR')  
+                    inr_val = int(val * Currency)
+                else:
+                    inr_val = 0
+                k = k + inr_val
+                H.value = k 
+                # calculating profit and loss
+                prj_est = sheet3.cell(row=ind, column=2).value
+                cur = prj_est[:3]
+                val1 = prj_est[4:]
+                if cur != 'INR':
+                    Currency1 = c.get_rate(cur, 'INR')
+                    Currency1 = float(Currency1) * float(val1)
+                else:
+                    Currency1 = val1
+                pl = Currency1 - k
+                if pl > 0:
+                    sheet3.cell(row=ind, column=9).value = pl
+                    sheet3.cell(row=ind, column=10).value = 0
+                else:
+                    sheet3.cell(row=ind, column=10).value = pl
+                    sheet3.cell(row=ind, column=9).value = 0
                 ind=i
-                print(k)
                 k=cell7.value
             if i==sheet3.max_row:
-                print(ind)
                 H=sheet3.cell(row=ind, column=8)
                 H.value = k
-                print(k)
         ach_rev = os.path.join(path2, sh3)
         wb_obj3.save(ach_rev)
-    return str(ach_rev)
+    return str("Please check the folder for output : "+ach_rev)
     #return redirect(url_for('index'))
 
 if __name__ =='__main__':

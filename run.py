@@ -16,7 +16,6 @@ def save_file(exl_file, fl):
     exl_file.save('InputFile/' +sheet )
     return sheet
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -150,9 +149,38 @@ def revenue():
                     sheet3.cell(row=ind, column=9).value = 0
                 ind=i
                 k=cell7.value
-            if i==sheet3.max_row:
+            # for finding the last row
+            if i == sheet3.max_row:
                 H=sheet3.cell(row=ind, column=8)
+                Cu = sheet3.cell(row=ind, column=3)
+                if Cu.value != None:
+                    expense = Cu.value
+                    curr = expense[:3]
+                    val = int(expense[4:])
+                    # if currency in not INR convert to INR
+                    if curr != 'INR':
+                        Currency = c.get_rate(curr, 'INR')  
+                        inr_val = int(val * Currency)
+                    else:
+                        inr_val = 0
+                    k = k + inr_val
                 H.value = k
+                # calculating profit and loss
+                prj_est = sheet3.cell(row=ind, column=2).value
+                cur = prj_est[:3]
+                val1 = prj_est[4:]
+                if cur != 'INR':
+                    Currency1 = c.get_rate(cur, 'INR')
+                    Currency1 = float(Currency1) * float(val1)
+                else:
+                    Currency1 = float(val1)
+                pl = Currency1 - k
+                if pl > 0:
+                    sheet3.cell(row=ind, column=9).value = pl
+                    sheet3.cell(row=ind, column=10).value = 0
+                else:
+                    sheet3.cell(row=ind, column=10).value = pl
+                    sheet3.cell(row=ind, column=9).value = 0
         ach_rev = os.path.join(path2, sh3)
         wb_obj3.save(ach_rev)
     return str("Please check the folder for output : "+ach_rev)

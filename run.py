@@ -1,4 +1,5 @@
-from flask import Flask, render_template, redirect, url_for, request
+# Revenue Calculation with Python Flask
+from flask import Flask, render_template, redirect, url_for, request, send_file
 from werkzeug.utils import secure_filename
 import os, openpyxl, secrets, xlsxwriter
 import os.path as op
@@ -8,18 +9,18 @@ from forex_python.converter import CurrencyRates
 app = Flask(__name__)
 
 c = CurrencyRates()
-
+# creating random file name
 def save_file(exl_file, fl):
     random_hex = secrets.token_hex(4)
     _, f_ext = os.path.splitext(exl_file.filename)
     sheet = fl + random_hex + f_ext
     exl_file.save('InputFile/' +sheet )
     return sheet
-
+# Home Route
 @app.route('/')
 def index():
     return render_template('index.html')
-
+# Generating Revenue Report
 @app.route('/revenue', methods=['POST'])
 def revenue():
     if request.method == 'POST':
@@ -108,6 +109,7 @@ def revenue():
         xlsx_file3 = Path(path2, sh3)
         wb_obj3 = openpyxl.load_workbook(xlsx_file3)
         sheet3 = wb_obj3.active
+        # here k is the achual revenue value
         k=0
         ind=2
         for i in range(2, sheet3.max_row+1):
@@ -181,10 +183,16 @@ def revenue():
                 else:
                     sheet3.cell(row=ind, column=10).value = pl
                     sheet3.cell(row=ind, column=9).value = 0
-        ach_rev = os.path.join(path2, sh3)
-        wb_obj3.save(ach_rev)
-    return str("Please check the folder for output : "+ach_rev)
-    #return redirect(url_for('index'))
-
+        output_path = os.path.join(path2, sh3)
+        wb_obj3.save(output_path)
+    # remove sheet 1
+    if os.path.exists(str(xlsx_file1)):
+      os.remove(str(xlsx_file1))
+    # remove sheet 2
+    if os.path.exists(str(xlsx_file2)):
+          os.remove(str(xlsx_file2))
+    # send output file revenue report
+    return send_file(output_path, attachment_filename="Revenue_Report.xlsx", as_attachment=True)
+    
 if __name__ =='__main__':
     app.run(debug=True) 

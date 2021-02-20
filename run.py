@@ -1,6 +1,5 @@
 # Revenue Calculation with Python Flask
 from flask import Flask, render_template, redirect, url_for, request, send_file
-from werkzeug.utils import secure_filename
 import os, openpyxl, secrets, xlsxwriter
 import os.path as op
 from pathlib import Path
@@ -10,11 +9,11 @@ app = Flask(__name__)
 
 c = CurrencyRates()
 # creating random file name
-def save_file(exl_file, fl):
+def save_file(excel_file):
     random_hex = secrets.token_hex(4)
-    _, f_ext = os.path.splitext(exl_file.filename)
-    sheet = fl + random_hex + f_ext
-    exl_file.save('InputFile/' +sheet )
+    _, f_ext = os.path.splitext(excel_file.filename)
+    sheet = random_hex + f_ext
+    excel_file.save('InputFile/' +sheet )
     return sheet
 # Home Route
 @app.route('/')
@@ -25,13 +24,11 @@ def index():
 def revenue():
     if request.method == 'POST':
         # Read excel sheet
-        f1 = request.files['sheet1']
-        fl1 = "1sh"
-        sh1 = save_file(f1, fl1)
+        input_sheet_1 = request.files['sheet1']
+        sh1 = save_file(input_sheet_1)
         
-        f2 = request.files['sheet2']
-        fl2 = "2sh"
-        sh2 = save_file(f2, fl2)
+        input_sheet_2 = request.files['sheet2']
+        sh2 = save_file(input_sheet_2)
         # Path of input folder 
         path1 =  op.join(op.dirname(__file__), 'InputFile')
         # Path of output folder 
@@ -46,7 +43,7 @@ def revenue():
         sheet2 = wb_obj2.active
 
         # Generate excel sheet
-        # sh3 = output file name
+        # sh3 is the output file name
         sh3 = secrets.token_hex(3) + "_report.xlsx"
         workbook = xlsxwriter.Workbook('OutputFile/'+sh3) 
         worksheet = workbook.add_worksheet() 
@@ -61,17 +58,8 @@ def revenue():
         worksheet.write('H1', 'Actual Revenue')
         worksheet.write('I1', 'Profit')
         worksheet.write('J1', 'Loss')
-    
+        # x = index value (for finding next project project detail)
         x = 2
-        ar = 0
-        # demo start
-        r = []
-        for i in range(2, sheet1.max_row):
-            cell = sheet1.cell(row=i, column=1).value
-            if cell != None:
-                r.append(cell)
-        # demo end
-
         for i in range(2, sheet1.max_row):
             my_cell1 = sheet1.cell(row=i, column=1)
             if my_cell1.value != None:
@@ -83,7 +71,6 @@ def revenue():
                 if prj2 != None:
                     prj2 = prj2.replace(" ", "")
                     prj2 = prj2.lower()
-                
                 # if employee name of sheet1 equal to employee name of sheet2 and project name of sheet1 equal to project name of sheet2 
                 if sheet1.cell(row=i, column=3).value == sheet2.cell(row=j, column=1).value and  prj2 == prj:
                     # project name
@@ -109,16 +96,16 @@ def revenue():
         xlsx_file3 = Path(path2, sh3)
         wb_obj3 = openpyxl.load_workbook(xlsx_file3)
         sheet3 = wb_obj3.active
-        # here k is the achual revenue value
-        k=0
+        # initralize achual revenue to zero
+        actual_revenue=0
         ind=2
         for i in range(2, sheet3.max_row+1):
             cell1 = sheet3.cell(row=i, column=1)
             cell7 = sheet3.cell(row=i, column=7)
             if i == 2:
-                k=k+cell7.value
+                actual_revenue = actual_revenue + cell7.value
             elif cell1.value == sheet3.cell(row=i-1, column=1).value and i != 2:
-                k=k+cell7.value
+                actual_revenue = actual_revenue + cell7.value
             else:
                 H = sheet3.cell(row=ind, column=8)
                 Cu = sheet3.cell(row=ind, column=3)
@@ -131,8 +118,8 @@ def revenue():
                     inr_val = int(val * Currency)
                 else:
                     inr_val = 0
-                k = k + inr_val
-                H.value = k 
+                actual_revenue = actual_revenue + inr_val
+                H.value = actual_revenue 
                 # calculating profit and loss
                 prj_est = sheet3.cell(row=ind, column=2).value
                 cur = prj_est[:3]
@@ -142,7 +129,7 @@ def revenue():
                     Currency1 = float(Currency1) * float(val1)
                 else:
                     Currency1 = val1
-                pl = Currency1 - k
+                pl = Currency1 - actual_revenue
                 if pl > 0:
                     sheet3.cell(row=ind, column=9).value = pl
                     sheet3.cell(row=ind, column=10).value = 0
@@ -150,7 +137,7 @@ def revenue():
                     sheet3.cell(row=ind, column=10).value = pl
                     sheet3.cell(row=ind, column=9).value = 0
                 ind=i
-                k=cell7.value
+                actual_revenue = cell7.value
             # for finding the last row
             if i == sheet3.max_row:
                 H=sheet3.cell(row=ind, column=8)
@@ -165,8 +152,8 @@ def revenue():
                         inr_val = int(val * Currency)
                     else:
                         inr_val = 0
-                    k = k + inr_val
-                H.value = k
+                    actual_revenue = actual_revenue + inr_val
+                H.value = actual_revenue
                 # calculating profit and loss
                 prj_est = sheet3.cell(row=ind, column=2).value
                 cur = prj_est[:3]
@@ -176,7 +163,7 @@ def revenue():
                     Currency1 = float(Currency1) * float(val1)
                 else:
                     Currency1 = float(val1)
-                pl = Currency1 - k
+                pl = Currency1 - actual_revenue
                 if pl > 0:
                     sheet3.cell(row=ind, column=9).value = pl
                     sheet3.cell(row=ind, column=10).value = 0
